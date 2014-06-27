@@ -83,7 +83,7 @@ if (isset($path['scheme']) || !file_exists($src)) {
     die('File cannot be found');
 }
 
-$file_salt = 'v1.0.0';
+$file_salt = 'v1.1.0';
 $file_size = filesize($src);
 $file_time = filemtime($src);
 $file_date = gmdate('D, d M Y H:i:s T', $file_time);
