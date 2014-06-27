@@ -7,12 +7,35 @@ Author:     Jamie Bicknell
 Twitter:    @jamiebicknell
 */
 
-define('THUMB_CACHE',           './cache/');    // Path to cache directory (must be writeable)
-define('THUMB_CACHE_AGE',       86400);         // Duration of cached files in seconds
-define('THUMB_BROWSER_CACHE',   true);          // Browser cache true or false
-define('SHARPEN_MIN',           12);            // Minimum sharpen value
-define('SHARPEN_MAX',           28);            // Maximum sharpen value
-define('ADJUST_ORIENTATION',    true);          // Auto adjust orientation for JPEG true or false
+// Path to cache directory (must be writeable)
+if ( ! defined('THUMB_CACHE')) {
+    define('THUMB_CACHE', './cache');
+}
+
+// Duration of cached files in seconds
+if ( ! defined('THUMB_CACHE_AGE')) {
+    define('THUMB_CACHE_AGE', 86400);
+}
+
+// Browser cache true or false
+if ( ! defined('THUMB_BROWSER_CACHE')) {
+    define('THUMB_BROWSER_CACHE', true);
+}
+
+// Browser cache true or false
+if ( ! defined('SHARPEN_MIN')) {
+    define('SHARPEN_MIN', 12);
+}
+
+// Maximum sharpen value
+if ( ! defined('SHARPEN_MAX')) {
+    define('SHARPEN_MAX', 28);
+}
+
+// Auto adjust orientation for JPEG true or false
+if ( ! defined('ADJUST_ORIENTATION')) {
+    define('ADJUST_ORIENTATION', true);
+}
 
 $src = isset($_GET['src']) ? $_GET['src'] : false;
 $size = isset($_GET['size']) ? str_replace(array('<', 'x'), '', $_GET['size']) != '' ? $_GET['size'] : 100 : 100;
@@ -51,27 +74,31 @@ if (isset($path['scheme'])) {
 if (!extension_loaded('gd')) {
     die('GD extension is not installed');
 }
+
 if (!is_writable(THUMB_CACHE)) {
     die('Cache not writable');
 }
+
 if (isset($path['scheme']) || !file_exists($src)) {
     die('File cannot be found');
-}
-if (!in_array(strtolower(substr(strrchr($src, '.'), 1)), array('gif', 'jpg', 'jpeg', 'png'))) {
-    die('File is not an image');
 }
 
 $file_salt = 'v1.0.0';
 $file_size = filesize($src);
 $file_time = filemtime($src);
 $file_date = gmdate('D, d M Y H:i:s T', $file_time);
-$file_type = strtolower(substr(strrchr($src, '.'), 1));
 $file_hash = md5($file_salt . ($src.$size.$crop.$trim.$zoom.$align.$sharpen.$gray.$ignore) . $file_time);
 $file_name = THUMB_CACHE . $file_hash . '.img.txt';
+$file_type = exif_imagetype($src);
+
+if (! $file_type) {
+    die('File is not an image');
+}
 
 if (!file_exists(THUMB_CACHE . 'index.html')) {
     touch(THUMB_CACHE . 'index.html');
 }
+
 $fp = fopen(THUMB_CACHE . 'index.html', 'r');
 if (flock($fp, LOCK_EX)) {
     if (time() - THUMB_CACHE_AGE > filemtime(THUMB_CACHE . 'index.html')) {
@@ -126,7 +153,7 @@ if (!file_exists($file_name)) {
         if (isset($exif['Orientation'])) {
             $degree = 0;
             $mirror = false;
-            switch($exif['Orientation']) {
+            switch ($exif['Orientation']) {
                 case 2:
                     $mirror = true;
                     break;
@@ -219,7 +246,7 @@ if (!file_exists($file_name)) {
     $im = imagecreatetruecolor($w, $h);
     $bg = imagecolorallocate($im, 255, 255, 255);
     imagefill($im, 0, 0, $bg);
-    switch($type) {
+    switch ($type) {
         case 1:
             imagecopyresampled($im, $oi, $x, $y, 0, 0, $w1, $h1, $w0, $h0);
             if ($sharpen && version_compare(PHP_VERSION, '5.1.0', '>=')) {
@@ -260,7 +287,7 @@ if (!file_exists($file_name)) {
     imagedestroy($oi);
 }
 
-header('Content-Type: image/' . $file_type);
+header('Content-Type: ' . image_type_to_mime_type($file_type));
 header('Content-Length: ' . filesize($file_name));
 header('Last-Modified: ' . $file_date);
 header('ETag: ' . $file_hash);
